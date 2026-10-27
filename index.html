@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clinic Booking</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      color: #2563eb;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+    }
+
+    .error {
+      background: #fee;
+      border: 1px solid #fcc;
+      color: #c00;
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+
+    .success {
+      background: #efe;
+      border: 1px solid #cfc;
+      color: #060;
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    label {
+      font-weight: 500;
+      margin-bottom: 5px;
+      display: block;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: #2563eb;
+    }
+
+    button {
+      background: #2563eb;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .slots-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    .slot-card {
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 15px;
+      background: white;
+    }
+
+    .slot-card.unavailable {
+      opacity: 0.5;
+      background: #f9f9f9;
+    }
+
+    .slot-time {
+      font-size: 18px;
+      font-weight: 600;
+      color: #2563eb;
+      margin-bottom: 5px;
+    }
+
+    .slot-provider {
+      color: #666;
+      margin-bottom: 8px;
+    }
+
+    .slot-status {
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+
+    .slot-status.available {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .slot-status.unavailable {
+      background: #fee;
+      color: #991b1b;
+    }
+
+    .confirmation {
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      padding: 20px;
+      border-radius: 6px;
+    }
+
+    .confirmation h2 {
+      color: #0c4a6e;
+      margin-bottom: 15px;
+    }
+
+    .confirmation-detail {
+      margin: 8px 0;
+    }
+
+    .confirmation-detail strong {
+      display: inline-block;
+      width: 120px;
+    }
+
+    .filter-section {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: #f9fafb;
+      border-radius: 6px;
+    }
+
+    .filter-section label {
+      margin-bottom: 8px;
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin: 30px 0 15px 0;
+      color: #1f2937;
+    }
+
+    #bookingForm {
+      background: #f9fafb;
+      padding: 20px;
+      border-radius: 6px;
+      margin-bottom: 30px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Clinic Booking System</h1>
+    <p class="subtitle">Book your appointment with our healthcare providers</p>
+
+    <div id="error" class="error" style="display: none;"></div>
+    <div id="confirmation" class="confirmation" style="display: none;"></div>
+
+    <div id="bookingForm">
+      <h2 class="section-title">Book an Appointment</h2>
+      <form id="form">
+        <div>
+          <label for="name">Your Name</label>
+          <input type="text" id="name" name="name" required placeholder="John Doe">
+        </div>
+        <div>
+          <label for="email">Your Email</label>
+          <input type="email" id="email" name="email" required placeholder="john@example.com">
+        </div>
+        <div>
+          <label for="slot">Select Time Slot</label>
+          <select id="slot" name="slot" required>
+            <option value="">-- Select a time slot --</option>
+          </select>
+        </div>
+        <button type="submit" id="submitBtn">Book Appointment</button>
+      </form>
+    </div>
+
+    <div class="filter-section">
+      <label for="providerFilter">Filter by Provider:</label>
+      <select id="providerFilter">
+        <option value="">All Providers</option>
+      </select>
+    </div>
+
+    <h2 class="section-title">Available Time Slots</h2>
+    <div id="loading" class="loading">Loading slots...</div>
+    <div id="emptyState" class="empty-state" style="display: none;">
+      No available slots at this time. Please check back later.
+    </div>
+    <div id="slotsGrid" class="slots-grid"></div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
