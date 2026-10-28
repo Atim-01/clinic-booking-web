@@ -4,7 +4,10 @@ const API_KEY = import.meta.env.VITE_API_KEY || '';
 
 let allSlots = [];
 let allProviders = [];
+let allDates = [];
 let selectedProvider = '';
+let selectedDate = '';
+let selectedSlotId = '';
 let currentUserEmail = '';
 
 // DOM elements
@@ -16,22 +19,20 @@ const errorDiv = document.getElementById('error');
 const confirmationDiv = document.getElementById('confirmation');
 const slotSelect = document.getElementById('slot');
 const providerFilter = document.getElementById('providerFilter');
+const dateFilter = document.getElementById('dateFilter');
 const submitBtn = document.getElementById('submitBtn');
 const myBookingsList = document.getElementById('myBookingsList');
 const myBookingsEmail = document.getElementById('myBookingsEmail');
 const viewBookingsBtn = document.getElementById('viewBookingsBtn');
 
 // Fetch slots from API
-async function fetchSlots(provider = '') {
+async function fetchSlots() {
   try {
     loading.style.display = 'block';
     slotsGrid.innerHTML = '';
     emptyState.style.display = 'none';
 
     const url = new URL(`${API_BASE_URL}/slots`);
-    if (provider) {
-      url.searchParams.append('provider', provider);
-    }
 
     const response = await fetch(url, {
       headers: {
@@ -55,12 +56,21 @@ async function fetchSlots(provider = '') {
     if (allSlots.length === 0) {
       emptyState.style.display = 'block';
     } else {
-      // Extract all unique providers from ALL slots (not just visible ones)
+      // Extract all unique providers and dates
       allProviders = [...new Set(allSlots.map(s => s.provider))];
       
-      renderSlots(allSlots);
-      populateSlotSelect(allSlots);
+      // Extract unique dates
+      const dateSet = new Set();
+      allSlots.forEach(slot => {
+        const date = new Date(slot.start);
+        const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+        dateSet.add(dateKey);
+      });
+      allDates = Array.from(dateSet).sort();
+      
       populateProviderFilter(allProviders);
+      populateDateFilter(allDates);
+      applyFiltersAndRender();
     }
   } catch (err) {
     loading.style.display = 'none';
@@ -68,71 +78,147 @@ async function fetchSlots(provider = '') {
   }
 }
 
+// Apply current filters and render
+function applyFiltersAndRender() {
+  let filteredSlots = allSlots;
+
+  // Filter by date
+  if (selectedDate) {
+    filteredSlots = filteredSlots.filter(slot => {
+      const slotDate = new Date(slot.start).toISOString().split('T')[0];
+      return slotDate === selectedDate;
+    });
+  }
+
+  // Filter by provider
+  if (selectedProvider) {
+    filteredSlots = filteredSlots.filter(slot => slot.provider === selectedProvider);
+  }
+
+  if (filteredSlots.length === 0) {
+    slotsGrid.innerHTML = '<div class="empty-state">No slots available for the selected filters. Try different options.</div>';
+  } else {
+    renderSlots(filteredSlots);
+    populateSlotSelect(filteredSlots);
+  }
+}
+
 // Render slots as cards, grouped by date
 function renderSlots(slots) {
   slotsGrid.innerHTML = '';
 
-  // Group slots by date
-  const slotsByDate = {};
-  slots.forEach(slot => {
-    const date = new Date(slot.start);
-    const dateKey = date.toLocaleDateString('en-US', { 
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      weekday: 'long'
-    });
-    
-    if (!slotsByDate[dateKey]) {
-      slotsByDate[dateKey] = [];
-    }
-    slotsByDate[dateKey].push(slot);
-  });
-
-  // Render each date group
-  Object.keys(slotsByDate).forEach(dateKey => {
-    const dateSection = document.createElement('div');
-    dateSection.className = 'date-section';
-    
-    const dateHeader = document.createElement('h3');
-    dateHeader.className = 'date-header';
-    dateHeader.textContent = dateKey;
-    dateSection.appendChild(dateHeader);
-    
+  // If a specific date is selected, don't group by date (already filtered to one date)
+  if (selectedDate) {
     const dateGrid = document.createElement('div');
     dateGrid.className = 'date-grid';
     
-    slotsByDate[dateKey].forEach(slot => {
-      const card = document.createElement('div');
-      card.className = `slot-card ${!slot.available ? 'unavailable' : ''}`;
-
-      const date = new Date(slot.start);
-      const endDate = new Date(slot.end);
-      const timeStr = date.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit',
-        hour12: true 
-      });
-      const endTimeStr = endDate.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit',
-        hour12: true 
-      });
-
-      card.innerHTML = `
-        <div class="slot-time">${timeStr} - ${endTimeStr}</div>
-        <div class="slot-provider">${slot.provider}</div>
-        <span class="slot-status ${slot.available ? 'available' : 'unavailable'}">
-          ${slot.available ? '✓ Available' : '✗ Booked'}
-        </span>
-      `;
-
+    slots.forEach(slot => {
+      const card = createSlotCard(slot);
       dateGrid.appendChild(card);
     });
     
-    dateSection.appendChild(dateGrid);
-    slotsGrid.appendChild(dateSection);
+    slotsGrid.appendChild(dateGrid);
+  } else {
+    // Group slots by date when showing all dates
+    const slotsByDate = {};
+    slots.forEach(slot => {
+      const date = new Date(slot.start);
+      const dateKey = date.toLocaleDateString('en-US', { 
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'long'
+      });
+      
+      if (!slotsByDate[dateKey]) {
+        slotsByDate[dateKey] = [];
+      }
+      slotsByDate[dateKey].push(slot);
+    });
+
+    // Render each date group
+    Object.keys(slotsByDate).forEach(dateKey => {
+      const dateSection = document.createElement('div');
+      dateSection.className = 'date-section';
+      
+      const dateHeader = document.createElement('h3');
+      dateHeader.className = 'date-header';
+      dateHeader.textContent = dateKey;
+      dateSection.appendChild(dateHeader);
+      
+      const dateGrid = document.createElement('div');
+      dateGrid.className = 'date-grid';
+      
+      slotsByDate[dateKey].forEach(slot => {
+        const card = createSlotCard(slot);
+        dateGrid.appendChild(card);
+      });
+      
+      dateSection.appendChild(dateGrid);
+      slotsGrid.appendChild(dateSection);
+    });
+  }
+}
+
+// Create a slot card element
+function createSlotCard(slot) {
+  const card = document.createElement('div');
+  card.className = `slot-card ${!slot.available ? 'unavailable' : ''} ${selectedSlotId === slot.id ? 'selected' : ''}`;
+  card.dataset.slotId = slot.id;
+
+  const date = new Date(slot.start);
+  const endDate = new Date(slot.end);
+  const timeStr = date.toLocaleTimeString('en-US', { 
+    hour: 'numeric', 
+    minute: '2-digit',
+    hour12: true 
   });
+  const endTimeStr = endDate.toLocaleTimeString('en-US', { 
+    hour: 'numeric', 
+    minute: '2-digit',
+    hour12: true 
+  });
+
+  card.innerHTML = `
+    <div class="slot-time">${timeStr} - ${endTimeStr}</div>
+    <div class="slot-provider">${slot.provider}</div>
+    <span class="slot-status ${slot.available ? 'available' : 'unavailable'}">
+      ${slot.available ? '✓ Available' : '✗ Booked'}
+    </span>
+  `;
+
+  // Make available slots clickable
+  if (slot.available) {
+    card.addEventListener('click', () => selectSlot(slot.id));
+  }
+
+  return card;
+}
+
+// Handle slot selection
+function selectSlot(slotId) {
+  selectedSlotId = slotId;
+  
+  // Update slot select dropdown
+  slotSelect.value = slotId;
+  
+  // Update visual state of all cards
+  document.querySelectorAll('.slot-card').forEach(card => {
+    if (card.dataset.slotId === slotId) {
+      card.classList.add('selected');
+    } else {
+      card.classList.remove('selected');
+    }
+  });
+  
+  // Scroll to booking form
+  document.getElementById('bookingForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  
+  // Focus on name input if empty
+  const nameInput = document.getElementById('name');
+  if (!nameInput.value.trim()) {
+    setTimeout(() => nameInput.focus(), 300);
+  }
 }
 
 // Populate slot select dropdown with available slots
@@ -158,9 +244,27 @@ function populateSlotSelect(slots) {
     });
 
     option.textContent = `${dateStr} at ${timeStr} - ${slot.provider}`;
+    if (slot.id === selectedSlotId) {
+      option.selected = true;
+    }
     slotSelect.appendChild(option);
   });
 }
+
+// Handle manual dropdown selection
+slotSelect.addEventListener('change', (e) => {
+  selectedSlotId = e.target.value;
+  
+  // Update visual state of cards
+  document.querySelectorAll('.slot-card').forEach(card => {
+    if (card.dataset.slotId === selectedSlotId) {
+      card.classList.add('selected');
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      card.classList.remove('selected');
+    }
+  });
+});
 
 // Populate provider filter dropdown
 function populateProviderFilter(providers) {
@@ -170,7 +274,34 @@ function populateProviderFilter(providers) {
     const option = document.createElement('option');
     option.value = provider;
     option.textContent = provider;
+    if (provider === selectedProvider) {
+      option.selected = true;
+    }
     providerFilter.appendChild(option);
+  });
+}
+
+// Populate date filter dropdown
+function populateDateFilter(dates) {
+  dateFilter.innerHTML = '<option value="">All Dates</option>';
+  
+  dates.forEach(dateStr => {
+    const option = document.createElement('option');
+    option.value = dateStr;
+    
+    const date = new Date(dateStr + 'T12:00:00'); // Use noon to avoid timezone issues
+    const formattedDate = date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    });
+    
+    option.textContent = formattedDate;
+    if (dateStr === selectedDate) {
+      option.selected = true;
+    }
+    dateFilter.appendChild(option);
   });
 }
 
@@ -262,11 +393,12 @@ form.addEventListener('submit', async (e) => {
     currentUserEmail = email; // Store for "my bookings"
     showConfirmation(data);
 
-    // Reset form
+    // Reset form and selection
     form.reset();
+    selectedSlotId = '';
 
     // Refresh slots to show updated availability
-    await fetchSlots(selectedProvider);
+    await fetchSlots();
   } catch (err) {
     showError(err.message);
   } finally {
@@ -278,7 +410,13 @@ form.addEventListener('submit', async (e) => {
 // Provider filter change handler
 providerFilter.addEventListener('change', (e) => {
   selectedProvider = e.target.value;
-  fetchSlots(selectedProvider);
+  applyFiltersAndRender();
+});
+
+// Date filter change handler
+dateFilter.addEventListener('change', (e) => {
+  selectedDate = e.target.value;
+  applyFiltersAndRender();
 });
 
 // Show error message
@@ -485,7 +623,7 @@ async function handleCancelBooking(e) {
     }
 
     // Refresh slots to show updated availability
-    await fetchSlots(selectedProvider);
+    await fetchSlots();
   } catch (err) {
     showError(`Error cancelling booking: ${err.message}`);
     e.target.disabled = false;
