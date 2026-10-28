@@ -9,6 +9,7 @@ let selectedProvider = '';
 let selectedDate = '';
 let selectedSlotId = '';
 let currentUserEmail = '';
+let countdownTimer = null;
 
 // DOM elements
 const form = document.getElementById('form');
@@ -380,7 +381,9 @@ form.addEventListener('submit', async (e) => {
         }
       } else if (response.status === 429) {
         const retryAfter = response.headers.get('Retry-After');
-        throw new Error(`Too many booking attempts. Please wait ${retryAfter} seconds and try again.`);
+        const seconds = parseInt(retryAfter) || 60;
+        startCountdown(seconds);
+        throw new Error(`Too many booking attempts for this email. Please wait.`);
       } else {
         throw new Error(data.error || `Booking failed: ${response.statusText}`);
       }
@@ -420,12 +423,41 @@ dateFilter.addEventListener('change', (e) => {
 function showError(message) {
   errorDiv.textContent = message;
   errorDiv.style.display = 'block';
-  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // Hide error message
 function hideError() {
   errorDiv.style.display = 'none';
+  if (countdownTimer) {
+    clearInterval(countdownTimer);
+    countdownTimer = null;
+  }
+}
+
+// Start countdown timer for rate limit
+function startCountdown(seconds) {
+  let remaining = seconds;
+  
+  const updateButton = () => {
+    if (remaining > 0) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = `Wait ${remaining} second${remaining !== 1 ? 's' : ''}...`;
+      remaining--;
+    } else {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Book Appointment';
+      if (countdownTimer) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+      }
+    }
+  };
+  
+  // Update immediately
+  updateButton();
+  
+  // Then update every second
+  countdownTimer = setInterval(updateButton, 1000);
 }
 
 // Show confirmation
@@ -456,7 +488,6 @@ function showConfirmation(booking) {
     </p>
   `;
   confirmationDiv.style.display = 'block';
-  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // Hide confirmation
