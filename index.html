@@ -367,6 +367,41 @@
       color: #6b7280;
       font-style: italic;
     }
+
+    .pagination-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 20px;
+      padding: 15px 0;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .pagination-btn {
+      background: white;
+      color: #2563eb;
+      border: 1px solid #2563eb;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .pagination-btn:hover:not(:disabled) {
+      background: #eff6ff;
+    }
+
+    .pagination-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .page-info {
+      color: #6b7280;
+      font-size: 14px;
+      font-weight: 500;
+    }
   </style>
 </head>
 <body>
@@ -402,6 +437,13 @@
           No available slots at this time. Please check back later.
         </div>
         <div id="slotsGrid" class="slots-grid"></div>
+        
+        <!-- Pagination Controls -->
+        <div id="paginationControls" class="pagination-controls" style="display: none;">
+          <button id="prevPageBtn" class="pagination-btn">&larr; Previous</button>
+          <span id="pageInfo" class="page-info">Page 1 of 1</span>
+          <button id="nextPageBtn" class="pagination-btn">Next &rarr;</button>
+        </div>
       </div>
 
       <!-- Right Column: Booking Form (Sticky) -->

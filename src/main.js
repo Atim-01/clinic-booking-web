@@ -10,6 +10,8 @@ let selectedDate = '';
 let selectedSlotId = '';
 let currentUserEmail = '';
 let countdownTimer = null;
+let currentPage = 1;
+const SLOTS_PER_PAGE = 12; // Show 12 slots per page
 
 // DOM elements
 const form = document.getElementById('form');
@@ -25,6 +27,10 @@ const submitBtn = document.getElementById('submitBtn');
 const myBookingsList = document.getElementById('myBookingsList');
 const myBookingsEmail = document.getElementById('myBookingsEmail');
 const viewBookingsBtn = document.getElementById('viewBookingsBtn');
+const paginationControls = document.getElementById('paginationControls');
+const prevPageBtn = document.getElementById('prevPageBtn');
+const nextPageBtn = document.getElementById('nextPageBtn');
+const pageInfo = document.getElementById('pageInfo');
 
 // Fetch slots from API
 async function fetchSlots() {
@@ -80,7 +86,7 @@ async function fetchSlots() {
 }
 
 // Apply current filters and render
-function applyFiltersAndRender() {
+function applyFiltersAndRender(resetPage = true) {
   let filteredSlots = allSlots;
 
   // Filter by date
@@ -96,11 +102,37 @@ function applyFiltersAndRender() {
     filteredSlots = filteredSlots.filter(slot => slot.provider === selectedProvider);
   }
 
+  if (resetPage) {
+    currentPage = 1;
+  }
+
   if (filteredSlots.length === 0) {
     slotsGrid.innerHTML = '<div class="empty-state">No slots available for the selected filters. Try different options.</div>';
+    paginationControls.style.display = 'none';
   } else {
-    renderSlots(filteredSlots);
+    renderSlotsWithPagination(filteredSlots);
     populateSlotSelect(filteredSlots);
+  }
+}
+
+// Render slots with pagination
+function renderSlotsWithPagination(slots) {
+  const totalPages = Math.ceil(slots.length / SLOTS_PER_PAGE);
+  const startIndex = (currentPage - 1) * SLOTS_PER_PAGE;
+  const endIndex = startIndex + SLOTS_PER_PAGE;
+  const paginatedSlots = slots.slice(startIndex, endIndex);
+
+  // Render the current page of slots
+  renderSlots(paginatedSlots);
+
+  // Update pagination controls
+  if (totalPages > 1) {
+    paginationControls.style.display = 'flex';
+    pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+    prevPageBtn.disabled = currentPage === 1;
+    nextPageBtn.disabled = currentPage === totalPages;
+  } else {
+    paginationControls.style.display = 'none';
   }
 }
 
@@ -417,6 +449,23 @@ providerFilter.addEventListener('change', (e) => {
 dateFilter.addEventListener('change', (e) => {
   selectedDate = e.target.value;
   applyFiltersAndRender();
+});
+
+// Pagination button handlers
+prevPageBtn.addEventListener('click', () => {
+  if (currentPage > 1) {
+    currentPage--;
+    applyFiltersAndRender(false);
+    slotsGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+});
+
+nextPageBtn.addEventListener('click', () => {
+  if (!nextPageBtn.disabled) {
+    currentPage++;
+    applyFiltersAndRender(false);
+    slotsGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 });
 
 // Show error message
