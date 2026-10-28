@@ -66,14 +66,20 @@ async function fetchSlots() {
       // Extract all unique providers and dates
       allProviders = [...new Set(allSlots.map(s => s.provider))];
       
-      // Extract unique dates
+      // Only offer dates that still have at least one available slot.
       const dateSet = new Set();
-      allSlots.forEach(slot => {
+      allSlots.filter(slot => slot.available).forEach(slot => {
         const date = new Date(slot.start);
         const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
         dateSet.add(dateKey);
       });
       allDates = Array.from(dateSet).sort();
+
+      // Keep the current date when it remains available; otherwise select the
+      // first upcoming date with availability rather than "All Dates".
+      if (!allDates.includes(selectedDate)) {
+        selectedDate = allDates[0] || '';
+      }
       
       populateProviderFilter(allProviders);
       populateDateFilter(allDates);
