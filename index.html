@@ -20,12 +20,36 @@
     }
 
     .container {
-      max-width: 900px;
+      max-width: 1400px;
       margin: 0 auto;
       background: white;
       padding: 30px;
       border-radius: 8px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .main-layout {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 30px;
+      align-items: start;
+    }
+
+    @media (max-width: 1024px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .slots-column {
+      min-width: 0; /* Prevent grid blowout */
+    }
+
+    .booking-column {
+      position: sticky;
+      top: 20px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
     }
 
     h1 {
@@ -325,16 +349,16 @@
 
     .view-bookings-form {
       display: flex;
+      flex-direction: column;
       gap: 10px;
-      align-items: flex-end;
     }
 
     .view-bookings-form > div {
-      flex: 1;
+      width: 100%;
     }
 
     .view-bookings-form button {
-      flex-shrink: 0;
+      width: 100%;
     }
 
     .no-bookings {
@@ -353,62 +377,71 @@
     <div id="error" class="error" style="display: none;"></div>
     <div id="confirmation" class="confirmation" style="display: none;"></div>
 
-    <div class="my-bookings-section">
-      <h2 class="section-title">My Bookings</h2>
-      <div class="view-bookings-form">
-        <div>
-          <label for="myBookingsEmail">Enter your email to view bookings</label>
-          <input type="email" id="myBookingsEmail" placeholder="john@example.com">
+    <div class="main-layout">
+      <!-- Left Column: Slots -->
+      <div class="slots-column">
+        <div class="filter-section">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+              <label for="dateFilter">Filter by Date:</label>
+              <select id="dateFilter">
+                <option value="">All Dates</option>
+              </select>
+            </div>
+            <div>
+              <label for="providerFilter">Filter by Provider:</label>
+              <select id="providerFilter">
+                <option value="">All Providers</option>
+              </select>
+            </div>
+          </div>
         </div>
-        <button type="button" id="viewBookingsBtn">View My Bookings</button>
+
+        <h2 class="section-title">Available Time Slots</h2>
+        <div id="loading" class="loading">Loading slots...</div>
+        <div id="emptyState" class="empty-state" style="display: none;">
+          No available slots at this time. Please check back later.
+        </div>
+        <div id="slotsGrid" class="slots-grid"></div>
       </div>
-      <div id="myBookingsList" style="margin-top: 20px;"></div>
-    </div>
 
-    <div id="bookingForm">
-      <h2 class="section-title">Book an Appointment</h2>
-      <form id="form">
-        <div>
-          <label for="name">Your Name</label>
-          <input type="text" id="name" name="name" required placeholder="John Doe">
+      <!-- Right Column: Booking Form (Sticky) -->
+      <div class="booking-column">
+        <div id="bookingForm">
+          <h2 class="section-title">Book an Appointment</h2>
+          <form id="form">
+            <div>
+              <label for="name">Your Name</label>
+              <input type="text" id="name" name="name" required placeholder="John Doe">
+            </div>
+            <div>
+              <label for="email">Your Email</label>
+              <input type="email" id="email" name="email" required placeholder="john@example.com">
+            </div>
+            <div>
+              <label for="slot">Select Time Slot</label>
+              <select id="slot" name="slot" required>
+                <option value="">-- Select a time slot --</option>
+              </select>
+            </div>
+            <button type="submit" id="submitBtn">Book Appointment</button>
+          </form>
         </div>
-        <div>
-          <label for="email">Your Email</label>
-          <input type="email" id="email" name="email" required placeholder="john@example.com">
-        </div>
-        <div>
-          <label for="slot">Select Time Slot</label>
-          <select id="slot" name="slot" required>
-            <option value="">-- Select a time slot --</option>
-          </select>
-        </div>
-        <button type="submit" id="submitBtn">Book Appointment</button>
-      </form>
-    </div>
 
-    <div class="filter-section">
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-        <div>
-          <label for="dateFilter">Filter by Date:</label>
-          <select id="dateFilter">
-            <option value="">All Dates</option>
-          </select>
-        </div>
-        <div>
-          <label for="providerFilter">Filter by Provider:</label>
-          <select id="providerFilter">
-            <option value="">All Providers</option>
-          </select>
+        <!-- My Bookings Section in Right Column -->
+        <div class="my-bookings-section" style="margin-top: 30px;">
+          <h2 class="section-title">My Bookings</h2>
+          <div class="view-bookings-form">
+            <div>
+              <label for="myBookingsEmail">Enter your email to view bookings</label>
+              <input type="email" id="myBookingsEmail" placeholder="john@example.com">
+            </div>
+            <button type="button" id="viewBookingsBtn">View My Bookings</button>
+          </div>
+          <div id="myBookingsList" style="margin-top: 20px;"></div>
         </div>
       </div>
     </div>
-
-    <h2 class="section-title">Available Time Slots</h2>
-    <div id="loading" class="loading">Loading slots...</div>
-    <div id="emptyState" class="empty-state" style="display: none;">
-      No available slots at this time. Please check back later.
-    </div>
-    <div id="slotsGrid" class="slots-grid"></div>
   </div>
 
   <script type="module" src="/src/main.js"></script>

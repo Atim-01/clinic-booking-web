@@ -211,13 +211,10 @@ function selectSlot(slotId) {
     }
   });
   
-  // Scroll to booking form
-  document.getElementById('bookingForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  
   // Focus on name input if empty
   const nameInput = document.getElementById('name');
   if (!nameInput.value.trim()) {
-    setTimeout(() => nameInput.focus(), 300);
+    nameInput.focus();
   }
 }
 
@@ -455,7 +452,7 @@ function showConfirmation(booking) {
     ` : ''}
     <div class="confirmation-detail"><strong>Status:</strong> ${booking.status}</div>
     <p style="margin-top: 15px; color: #0c4a6e;">
-      A confirmation email will be sent to ${booking.email}
+      Your appointment is confirmed
     </p>
   `;
   confirmationDiv.style.display = 'block';
