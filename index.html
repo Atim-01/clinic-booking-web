@@ -207,6 +207,123 @@
       border-radius: 6px;
       margin-bottom: 30px;
     }
+
+    .date-section {
+      margin-bottom: 30px;
+    }
+
+    .date-header {
+      font-size: 16px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+
+    .date-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+
+    .my-bookings-section {
+      background: #f9fafb;
+      padding: 20px;
+      border-radius: 6px;
+      margin-bottom: 30px;
+    }
+
+    .booking-item {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 15px;
+      margin-bottom: 12px;
+    }
+
+    .booking-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .booking-id {
+      font-weight: 600;
+      color: #2563eb;
+      font-size: 14px;
+    }
+
+    .booking-status-badge {
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .booking-status-badge.confirmed {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .booking-status-badge.cancelled {
+      background: #fee;
+      color: #991b1b;
+    }
+
+    .booking-detail {
+      margin: 6px 0;
+      font-size: 14px;
+      color: #4b5563;
+    }
+
+    .booking-detail strong {
+      display: inline-block;
+      width: 90px;
+      color: #1f2937;
+    }
+
+    .cancel-btn {
+      background: #dc2626;
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .cancel-btn:hover {
+      background: #b91c1c;
+    }
+
+    .cancel-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .view-bookings-form {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    .view-bookings-form > div {
+      flex: 1;
+    }
+
+    .view-bookings-form button {
+      flex-shrink: 0;
+    }
+
+    .no-bookings {
+      text-align: center;
+      padding: 20px;
+      color: #6b7280;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
@@ -216,6 +333,18 @@
 
     <div id="error" class="error" style="display: none;"></div>
     <div id="confirmation" class="confirmation" style="display: none;"></div>
+
+    <div class="my-bookings-section">
+      <h2 class="section-title">My Bookings</h2>
+      <div class="view-bookings-form">
+        <div>
+          <label for="myBookingsEmail">Enter your email to view bookings</label>
+          <input type="email" id="myBookingsEmail" placeholder="john@example.com">
+        </div>
+        <button type="button" id="viewBookingsBtn">View My Bookings</button>
+      </div>
+      <div id="myBookingsList" style="margin-top: 20px;"></div>
+    </div>
 
     <div id="bookingForm">
       <h2 class="section-title">Book an Appointment</h2>

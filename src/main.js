@@ -3,7 +3,9 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000
 const API_KEY = import.meta.env.VITE_API_KEY || '';
 
 let allSlots = [];
+let allProviders = [];
 let selectedProvider = '';
+let currentUserEmail = '';
 
 // DOM elements
 const form = document.getElementById('form');
@@ -15,6 +17,9 @@ const confirmationDiv = document.getElementById('confirmation');
 const slotSelect = document.getElementById('slot');
 const providerFilter = document.getElementById('providerFilter');
 const submitBtn = document.getElementById('submitBtn');
+const myBookingsList = document.getElementById('myBookingsList');
+const myBookingsEmail = document.getElementById('myBookingsEmail');
+const viewBookingsBtn = document.getElementById('viewBookingsBtn');
 
 // Fetch slots from API
 async function fetchSlots(provider = '') {
@@ -50,9 +55,12 @@ async function fetchSlots(provider = '') {
     if (allSlots.length === 0) {
       emptyState.style.display = 'block';
     } else {
+      // Extract all unique providers from ALL slots (not just visible ones)
+      allProviders = [...new Set(allSlots.map(s => s.provider))];
+      
       renderSlots(allSlots);
       populateSlotSelect(allSlots);
-      populateProviderFilter(allSlots);
+      populateProviderFilter(allProviders);
     }
   } catch (err) {
     loading.style.display = 'none';
@@ -60,42 +68,70 @@ async function fetchSlots(provider = '') {
   }
 }
 
-// Render slots as cards
+// Render slots as cards, grouped by date
 function renderSlots(slots) {
   slotsGrid.innerHTML = '';
 
+  // Group slots by date
+  const slotsByDate = {};
   slots.forEach(slot => {
-    const card = document.createElement('div');
-    card.className = `slot-card ${!slot.available ? 'unavailable' : ''}`;
-
     const date = new Date(slot.start);
-    const endDate = new Date(slot.end);
-    const timeStr = date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit',
-      hour12: true 
+    const dateKey = date.toLocaleDateString('en-US', { 
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      weekday: 'long'
     });
-    const endTimeStr = endDate.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit',
-      hour12: true 
-    });
-    const dateStr = date.toLocaleDateString('en-US', { 
-      weekday: 'short',
-      month: 'short', 
-      day: 'numeric' 
-    });
+    
+    if (!slotsByDate[dateKey]) {
+      slotsByDate[dateKey] = [];
+    }
+    slotsByDate[dateKey].push(slot);
+  });
 
-    card.innerHTML = `
-      <div class="slot-time">${timeStr} - ${endTimeStr}</div>
-      <div class="slot-provider">${slot.provider}</div>
-      <div>${dateStr}</div>
-      <span class="slot-status ${slot.available ? 'available' : 'unavailable'}">
-        ${slot.available ? 'Available' : 'Booked'}
-      </span>
-    `;
+  // Render each date group
+  Object.keys(slotsByDate).forEach(dateKey => {
+    const dateSection = document.createElement('div');
+    dateSection.className = 'date-section';
+    
+    const dateHeader = document.createElement('h3');
+    dateHeader.className = 'date-header';
+    dateHeader.textContent = dateKey;
+    dateSection.appendChild(dateHeader);
+    
+    const dateGrid = document.createElement('div');
+    dateGrid.className = 'date-grid';
+    
+    slotsByDate[dateKey].forEach(slot => {
+      const card = document.createElement('div');
+      card.className = `slot-card ${!slot.available ? 'unavailable' : ''}`;
 
-    slotsGrid.appendChild(card);
+      const date = new Date(slot.start);
+      const endDate = new Date(slot.end);
+      const timeStr = date.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+      });
+      const endTimeStr = endDate.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+      });
+
+      card.innerHTML = `
+        <div class="slot-time">${timeStr} - ${endTimeStr}</div>
+        <div class="slot-provider">${slot.provider}</div>
+        <span class="slot-status ${slot.available ? 'available' : 'unavailable'}">
+          ${slot.available ? '✓ Available' : '✗ Booked'}
+        </span>
+      `;
+
+      dateGrid.appendChild(card);
+    });
+    
+    dateSection.appendChild(dateGrid);
+    slotsGrid.appendChild(dateSection);
   });
 }
 
@@ -127,9 +163,7 @@ function populateSlotSelect(slots) {
 }
 
 // Populate provider filter dropdown
-function populateProviderFilter(slots) {
-  const providers = [...new Set(slots.map(s => s.provider))];
-  
+function populateProviderFilter(providers) {
   providerFilter.innerHTML = '<option value="">All Providers</option>';
   
   providers.forEach(provider => {
@@ -144,9 +178,37 @@ function populateProviderFilter(slots) {
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
 
-  const name = document.getElementById('name').value;
-  const email = document.getElementById('email').value;
+  const name = document.getElementById('name').value.trim();
+  const email = document.getElementById('email').value.trim();
   const slot_id = slotSelect.value;
+
+  // Validation with specific error messages
+  if (!name) {
+    showError('Please enter your name');
+    return;
+  }
+
+  if (!email) {
+    showError('Please enter your email address');
+    return;
+  }
+
+  // Validate email format more explicitly
+  if (!email.includes('@')) {
+    showError('Email must contain @ symbol (e.g., name@example.com)');
+    return;
+  }
+
+  const emailParts = email.split('@');
+  if (emailParts.length !== 2 || !emailParts[0] || !emailParts[1]) {
+    showError('Please enter a valid email address (e.g., name@example.com)');
+    return;
+  }
+
+  if (!emailParts[1].includes('.')) {
+    showError('Email domain must include a dot (e.g., name@example.com)');
+    return;
+  }
 
   if (!slot_id) {
     showError('Please select a time slot');
@@ -175,10 +237,29 @@ form.addEventListener('submit', async (e) => {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || `Booking failed: ${response.statusText}`);
+      // More specific error messages
+      if (response.status === 409) {
+        throw new Error('This slot has already been booked. Please choose another time slot.');
+      } else if (response.status === 404) {
+        throw new Error('The selected slot was not found. Please refresh and try again.');
+      } else if (response.status === 400) {
+        if (data.error === 'slot already started') {
+          throw new Error('This slot has already started. Please choose a future time slot.');
+        } else if (data.error === 'invalid booking') {
+          throw new Error('Please check your booking details and try again.');
+        } else {
+          throw new Error(data.error || 'Invalid booking details');
+        }
+      } else if (response.status === 429) {
+        const retryAfter = response.headers.get('Retry-After');
+        throw new Error(`Too many booking attempts. Please wait ${retryAfter} seconds and try again.`);
+      } else {
+        throw new Error(data.error || `Booking failed: ${response.statusText}`);
+      }
     }
 
     // Success - show confirmation
+    currentUserEmail = email; // Store for "my bookings"
     showConfirmation(data);
 
     // Reset form
@@ -246,6 +327,170 @@ function showConfirmation(booking) {
 // Hide confirmation
 function hideConfirmation() {
   confirmationDiv.style.display = 'none';
+}
+
+// View bookings for a user
+viewBookingsBtn.addEventListener('click', async () => {
+  const email = myBookingsEmail.value.trim();
+  
+  if (!email) {
+    showError('Please enter your email address to view bookings');
+    return;
+  }
+
+  if (!email.includes('@') || !email.includes('.')) {
+    showError('Please enter a valid email address');
+    return;
+  }
+
+  try {
+    viewBookingsBtn.disabled = true;
+    viewBookingsBtn.textContent = 'Loading...';
+    myBookingsList.innerHTML = '<div class="loading">Loading your bookings...</div>';
+    hideError();
+
+    const response = await fetch(`${API_BASE_URL}/bookings?email=${encodeURIComponent(email)}`, {
+      headers: {
+        'X-API-Key': API_KEY,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch bookings: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const bookings = data.bookings || [];
+
+    if (bookings.length === 0) {
+      myBookingsList.innerHTML = '<div class="no-bookings">No bookings found for this email address.</div>';
+    } else {
+      renderBookings(bookings);
+    }
+
+    currentUserEmail = email; // Store for future use
+  } catch (err) {
+    myBookingsList.innerHTML = '';
+    showError(`Error loading bookings: ${err.message}`);
+  } finally {
+    viewBookingsBtn.disabled = false;
+    viewBookingsBtn.textContent = 'View My Bookings';
+  }
+});
+
+// Render bookings list
+function renderBookings(bookings) {
+  myBookingsList.innerHTML = '';
+
+  bookings.forEach(booking => {
+    const bookingDiv = document.createElement('div');
+    bookingDiv.className = 'booking-item';
+
+    // Find the slot details
+    const slot = allSlots.find(s => s.id === booking.slot_id);
+    let slotTimeStr = 'Time not available';
+    let providerStr = 'Provider not available';
+
+    if (slot) {
+      const startDate = new Date(slot.start);
+      const endDate = new Date(slot.end);
+      slotTimeStr = `${startDate.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      })} at ${startDate.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      })} - ${endDate.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      })}`;
+      providerStr = slot.provider;
+    }
+
+    const statusClass = booking.status === 'confirmed' ? 'confirmed' : 'cancelled';
+
+    bookingDiv.innerHTML = `
+      <div class="booking-header">
+        <span class="booking-id">Booking #${booking.id}</span>
+        <span class="booking-status-badge ${statusClass}">${booking.status}</span>
+      </div>
+      <div class="booking-detail"><strong>Name:</strong> ${booking.name}</div>
+      <div class="booking-detail"><strong>Provider:</strong> ${providerStr}</div>
+      <div class="booking-detail"><strong>Time:</strong> ${slotTimeStr}</div>
+      ${booking.status === 'confirmed' ? `
+        <button class="cancel-btn" data-booking-id="${booking.id}" data-slot-id="${booking.slot_id}">
+          Cancel Booking
+        </button>
+      ` : ''}
+    `;
+
+    myBookingsList.appendChild(bookingDiv);
+  });
+
+  // Add event listeners for cancel buttons
+  document.querySelectorAll('.cancel-btn').forEach(btn => {
+    btn.addEventListener('click', handleCancelBooking);
+  });
+}
+
+// Handle cancel booking
+async function handleCancelBooking(e) {
+  const bookingId = e.target.dataset.bookingId;
+  const slotId = e.target.dataset.slotId;
+
+  if (!confirm('Are you sure you want to cancel this booking?')) {
+    return;
+  }
+
+  try {
+    e.target.disabled = true;
+    e.target.textContent = 'Cancelling...';
+    hideError();
+
+    const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}`, {
+      method: 'DELETE',
+      headers: {
+        'X-API-Key': API_KEY,
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error('Booking not found');
+      } else if (response.status === 409) {
+        throw new Error('This booking has already been cancelled');
+      } else {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to cancel booking');
+      }
+    }
+
+    const data = await response.json();
+
+    // Show success message
+    showError('✓ Booking cancelled successfully');
+    errorDiv.className = 'success'; // Change to success styling
+    setTimeout(() => {
+      errorDiv.className = 'error';
+    }, 3000);
+
+    // Refresh the bookings list
+    if (currentUserEmail) {
+      myBookingsEmail.value = currentUserEmail;
+      viewBookingsBtn.click();
+    }
+
+    // Refresh slots to show updated availability
+    await fetchSlots(selectedProvider);
+  } catch (err) {
+    showError(`Error cancelling booking: ${err.message}`);
+    e.target.disabled = false;
+    e.target.textContent = 'Cancel Booking';
+  }
 }
 
 // Initialize app
